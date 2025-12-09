@@ -4,55 +4,62 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-// ใช้ URI ตามที่บอกไว้
-require('dotenv').config();
+// ================== MONGO URI ==================
+// 👉 แก้ตรงนี้ให้ใส่รหัสผ่านจริงของ user ใน MongoDB Atlas
+const MONGO_URI = "mongodb+srv://thanakritthongphat:p240351@bus.1p9tv1q.mongodb.net/?appName=bus";
 
-const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('❌ ไม่มีค่า MONGO_URI');
+}
 
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch((err) => {
+    console.error('❌ MongoDB error:', err);
+  });
 
-// เชื่อมต่อ MongoDB
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB error:', err));
-
-// สร้าง Schema
+// ================ SCHEMA / MODEL ================
 const seatSchema = new mongoose.Schema({
   seatNumber: { type: Number, required: true, unique: true },
   checked: { type: Boolean, default: false },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
 });
 
-// ผูกกับ collection ชื่อ "seats"
 const Seat = mongoose.model('Seat', seatSchema, 'seats');
 
-// ดึงข้อมูลที่นั่งทั้งหมด
+// ================ ROUTES =======================
+
+// เช็คว่า API ยังทำงานอยู่ไหม
+app.get('/', (req, res) => {
+  res.json({ ok: true, message: 'Bus API is running' });
+});
+
+// ดึงทุกที่นั่ง
 app.get('/api/seats', async (req, res) => {
   try {
     const seats = await Seat.find({});
     res.json(seats);
   } catch (err) {
-    console.error(err);
+    console.error('GET /api/seats error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// อัปเดตสถานะที่นั่ง หรือ ลบถ้า checked = false
+// เช็ค / ยกเลิกที่นั่ง
 app.post('/api/seats/:seatNumber', async (req, res) => {
   try {
     const seatNumber = Number(req.params.seatNumber);
     const { checked } = req.body;
 
-    // ถ้า checked เป็น false ให้ลบ record ออกจากฐานข้อมูล
     if (checked === false) {
       await Seat.deleteOne({ seatNumber });
       return res.json({ seatNumber, deleted: true });
     }
 
-    // ถ้า checked เป็น true ให้บันทึก/อัปเดตตามปกติ
     const seat = await Seat.findOneAndUpdate(
       { seatNumber },
       { checked: true, updatedAt: new Date() },
@@ -61,24 +68,24 @@ app.post('/api/seats/:seatNumber', async (req, res) => {
 
     res.json(seat);
   } catch (err) {
-    console.error(err);
+    console.error('POST /api/seats/:seatNumber error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ล้างสถานะที่นั่งทั้งหมด: ลบทุก document ใน collection
+// ล้างทั้งหมด
 app.post('/api/seats/clear', async (req, res) => {
   try {
     await Seat.deleteMany({});
     res.json({ message: 'cleared' });
   } catch (err) {
-    console.error(err);
+    console.error('POST /api/seats/clear error:', err);
     res.status(500).json({ message: 'error' });
   }
 });
 
-// รันเซิร์ฟเวอร์
-const PORT = process.env.PORT || 3000;
+// ================ RUN SERVER ===================
+const PORT = process.env.PORT || 3000; // Render จะใส่ PORT ให้เอง
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
