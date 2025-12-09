@@ -85,7 +85,7 @@ app.post('/api/seats/clear', async (req, res) => {
 });
 
 // ================ RUN SERVER ===================
-const PORT = process.env.PORT || 3000; // Render จะใส่ PORT ให้เอง
+const PORT = process.env.PORT || 10000; // Render จะใส่ PORT ให้เอง
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
